@@ -50,7 +50,7 @@ def remove_rand(graph):
     ax2.set_title("Avg degrees at # of nodes")
     ax2.set_ylabel("Degrees")
     ax2.set_xlabel("# of Nodes")
-    plt.savefig("reg_rem.png")
+    plt.savefig("after_removing.png")
 
 
 def degrees(graph):
