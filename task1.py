@@ -29,27 +29,27 @@ def remove_rand(graph):
     while len(list(graph)) > 1:
         rand = choice(list(graph.nodes()))
         graph.remove_node(rand)
-        _, _, d, avg_degree = degrees(graph)
+        _, _, centrality, avg_degree = degrees(graph)
         avg_degrees.append(avg_degree)
-        avg_degree_c.append(statistics.mean(d))
+        avg_degree_c.append(max(centrality))
 
     print("Avg degrees: ", avg_degrees)
-    nodes = list(range(50, 50 - len(avg_degree_c), -1))
+    nodes = list(range(len(avg_degree_c), 0, -1))
 
     fig = plt.figure("Degrees After", figsize=(12, 6))
     axgrid = fig.add_gridspec(4, 2)
     ax1 = fig.add_subplot(axgrid[:, :1])
-    ax1.plot(nodes, avg_degree_c)
+    ax1.bar(nodes, avg_degree_c)
     ax1.xaxis.set_inverted(True)
-    ax1.set_title("Degree Centrality per node")
+    ax1.set_title("Max Degree Centrality at # of nodes")
     ax1.set_ylabel("Degree Centrality")
     ax1.set_xlabel("Nodes")
     ax2 = fig.add_subplot(axgrid[:, 1:])
     ax2.xaxis.set_inverted(True)
-    ax2.plot(nodes, avg_degrees)
-    ax2.set_title("Degrees per node")
+    ax2.bar(nodes, avg_degrees)
+    ax2.set_title("Avg degrees at # of nodes")
     ax2.set_ylabel("Degrees")
-    ax2.set_xlabel("Nodes")
+    ax2.set_xlabel("# of Nodes")
     plt.savefig("reg_rem.png")
 
 
@@ -63,12 +63,12 @@ def degrees(graph):
 
     avg_degree = statistics.mean(degs)
 
-    d = []
+    degree_centrality_values = []
     for node in graph:
         centrality = nx.degree_centrality(graph)
-        d.append(centrality[node])
+        degree_centrality_values.append(centrality[node])
 
-    return nodes, degs, d, avg_degree
+    return nodes, degs, degree_centrality_values, avg_degree
 
 
 def draw_degrees(nodes, degs, d, file="degrees.png"):
@@ -78,12 +78,12 @@ def draw_degrees(nodes, degs, d, file="degrees.png"):
     ax1.bar(nodes, d)
     ax1.set_title("Degree Centrality per node")
     ax1.set_ylabel("Degree Centrality")
-    ax1.set_xlabel("Nodes")
+    ax1.set_xlabel("Node")
     ax2 = fig.add_subplot(axgrid[:, 1:])
     ax2.bar(nodes, degs)
     ax2.set_title("Degrees per node")
     ax2.set_ylabel("Degrees")
-    ax2.set_xlabel("Nodes")
+    ax2.set_xlabel("Node")
     plt.savefig(file)
 
 
