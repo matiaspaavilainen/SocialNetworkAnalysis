@@ -1,90 +1,28 @@
-import statistics
+import random
 import networkx as nx
+import pandas as pd
 import matplotlib.pyplot as plt
-from random import choice, randint
-
 import numpy as np
 
 
-def genereate_graph():
-    G = nx.Graph()
-    names = ["John", "Jane", "Lux", "Bard"]
-    for i in range(1, 51):
-        label = choice(names)
-        G.add_node(i, label=label)
-        # random amount of edges
-        for j in range(0, randint(1, 5)):
-            rand = randint(1, i)
-            if rand == i:
-                G.add_edge(i, rand + 1)
-            else:
-                G.add_edge(i, rand)
+def plot_histogram(
+    data_list,
+    title="Histogram",
+    xlabel="Value",
+    file=None,
+):
+    ylabel = "Frequency"
+    plt.figure(figsize=(10, 6), clear=True)
 
-    return G
+    plt.hist(data_list)
 
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.tight_layout()
 
-def remove_rand(graph):
-    avg_degrees = []
-    avg_degree_c = []
-    while len(list(graph)) > 1:
-        rand = choice(list(graph.nodes()))
-        graph.remove_node(rand)
-        _, _, centrality, avg_degree = degrees(graph)
-        avg_degrees.append(avg_degree)
-        avg_degree_c.append(max(centrality))
-
-    print("Avg degrees: ", avg_degrees)
-    nodes = list(range(len(avg_degree_c), 0, -1))
-
-    fig = plt.figure("Degrees After", figsize=(12, 6))
-    axgrid = fig.add_gridspec(4, 2)
-    ax1 = fig.add_subplot(axgrid[:, :1])
-    ax1.bar(nodes, avg_degree_c)
-    ax1.xaxis.set_inverted(True)
-    ax1.set_title("Max Degree Centrality at # of nodes")
-    ax1.set_ylabel("Degree Centrality")
-    ax1.set_xlabel("Nodes")
-    ax2 = fig.add_subplot(axgrid[:, 1:])
-    ax2.xaxis.set_inverted(True)
-    ax2.bar(nodes, avg_degrees)
-    ax2.set_title("Avg degrees at # of nodes")
-    ax2.set_ylabel("Degrees")
-    ax2.set_xlabel("# of Nodes")
-    plt.savefig("after_removing.png")
-
-
-def degrees(graph):
-    degrees = nx.degree(graph)
-    degs = []
-    nodes = []
-    for i in degrees:
-        nodes.append(i[0])
-        degs.append(i[1])
-
-    avg_degree = statistics.mean(degs)
-
-    degree_centrality_values = []
-    for node in graph:
-        centrality = nx.degree_centrality(graph)
-        degree_centrality_values.append(centrality[node])
-
-    return nodes, degs, degree_centrality_values, avg_degree
-
-
-def draw_degrees(nodes, degs, d, file="degrees.png"):
-    fig = plt.figure("Degrees", figsize=(12, 6))
-    axgrid = fig.add_gridspec(4, 2)
-    ax1 = fig.add_subplot(axgrid[:, :1])
-    ax1.bar(nodes, d)
-    ax1.set_title("Degree Centrality per node")
-    ax1.set_ylabel("Degree Centrality")
-    ax1.set_xlabel("Node")
-    ax2 = fig.add_subplot(axgrid[:, 1:])
-    ax2.bar(nodes, degs)
-    ax2.set_title("Degrees per node")
-    ax2.set_ylabel("Degrees")
-    ax2.set_xlabel("Node")
     plt.savefig(file)
+    plt.close()
 
 
 def visualize_graph(graph, file="graph.png"):
@@ -125,12 +63,106 @@ def visualize_graph(graph, file="graph.png"):
 
 
 def main():
-    G = genereate_graph()
-    print(f"Edges: {G.number_of_edges()}, Nodes: {G.number_of_nodes()}")
-    visualize_graph(G)
-    nodes, degs, d, avg = degrees(G)
-    draw_degrees(nodes, degs, d)
-    remove_rand(G)
+    edges_df = pd.read_csv("edges.csv")
+    G: nx.Graph = nx.from_pandas_edgelist(edges_df, source="id_1", target="id_2")
+
+    features_df = pd.read_csv("features.csv")
+    targets_df = pd.read_csv("target.csv")
+
+    for node_id, data in features_df.iterrows():
+        if node_id in G:
+            G.nodes[node_id]["features"] = ",".join(map(str, data.values))
+
+    for node_id, target in targets_df.iterrows():
+        if node_id in G:
+            G.nodes[node_id]["target"] = int(target.values[0])
+
+    # Write to GEXF
+    nx.write_gexf(G, "network.gexf")
+
+    # degree
+    degrees = dict(G.degree())
+    highest_degree_node = max(degrees, key=degrees.get)
+    print(f"Node, degree: {highest_degree_node}, {degrees[highest_degree_node]}")
+
+    # get componetns
+    components = list(nx.connected_components(G))
+
+    print(f"Connected components: {len(components)}")
+
+    # page rank
+    page_ranks = list(nx.pagerank(G).values())
+    plot_histogram(
+        page_ranks,
+        "Page Ranks",
+        xlabel="Rank",
+        file="page_rank.png",
+    )
+
+    # degree centraliy
+    degree_centr = list(nx.degree_centrality(G).values())
+    plot_histogram(
+        degree_centr,
+        "Degree centrality",
+        xlabel="Degree CEntarality",
+        file="degree_centrality.png",
+    )
+
+    # eigen centr
+    eigen_centr = list(nx.eigenvector_centrality_numpy(G).values())
+    plot_histogram(
+        eigen_centr,
+        "Eigen Centrality",
+        xlabel="Eigen",
+        file="eigen_centrality.png",
+    )
+
+    # betweennes
+    between = list(nx.betweenness_centrality(G, k=1).values())
+    plot_histogram(
+        between,
+        "Betweennes centrality",
+        xlabel="Betweennes",
+        file="between_centr.png",
+    )
+
+    # closeness
+    closness = list(nx.closeness_centrality(G).values())
+    plot_histogram(
+        closness,
+        "Closeness cetnrality",
+        xlabel="Closeness",
+        file="closeness.png",
+    )
+
+    clustering = nx.clustering(G).values()
+
+    plt.plot(clustering, marker=".", linestyle="")
+
+    plt.title("clustering")
+    plt.tight_layout()
+
+    plt.savefig("clusterign.png")
+    plt.close()
+
+    plot_histogram(
+        clustering, title="Clustering", xlabel="Coefficient", file="clustering_hist.png"
+    )
+
+    # global clustering idk
+    global_clust = nx.average_clustering(G)
+    print(f"total clustering: {global_clust}")
+
+    # subgraph
+    bipart = None
+    while not bipart:
+        sample_nodes = random.sample(list(G.nodes()), min(32, len(G.nodes())))
+        sample_graph: nx.Graph = G.subgraph(sample_nodes).copy()
+        if nx.is_bipartite(sample_graph) and sample_graph.number_of_edges() > 2:
+            bipart = sample_graph
+
+    print(bipart)
+    visualize_graph(bipart, "bipart.png")
 
 
 if __name__ == "__main__":
