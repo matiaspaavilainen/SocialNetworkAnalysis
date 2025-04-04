@@ -1,9 +1,6 @@
 import os
-import random
 import networkx as nx
-import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
 
 
 def plot_histogram(
@@ -27,48 +24,52 @@ def plot_histogram(
 
 
 def load_facebook_ego_network(ego_id):
-    base_path = "facebook"  # Folder where the data is stored
+    base_path = "facebook"
 
-    # Load edges (space-delimited)
     edges_file = os.path.join(base_path, f"{ego_id}.edges")
-    G: nx.Graph = nx.read_edgelist(edges_file, delimiter=" ", nodetype=int)
+    G: nx.DiGraph = nx.read_edgelist(
+        edges_file, delimiter=" ", nodetype=int, create_using=nx.DiGraph()
+    )
 
-    # Add the ego node (may not be in edge list)
     G.add_node(int(ego_id))
     return G
 
 
 def main():
-    ego_id = 0
-    G = load_facebook_ego_network(ego_id)
-    G1 = load_facebook_ego_network(107)
-    G2 = load_facebook_ego_network(348)
-    G3 = load_facebook_ego_network(414)
-    G4 = load_facebook_ego_network(686)
-    G5 = load_facebook_ego_network(1684)
-    G6 = load_facebook_ego_network(1912)
-    G7 = load_facebook_ego_network(3437)
-    G8 = load_facebook_ego_network(3980)
+    ids = [0, 107, 348, 414, 686, 698, 1684, 1912, 3437, 3980]
+    G = nx.DiGraph()
+    for id in ids:
+        H = load_facebook_ego_network(id)
+        G = nx.disjoint_union(G, H)
 
-    G = nx.disjoint_union_all([G, G1, G2, G3, G4, G5, G6, G7, G8])
+    # get 100 nodes
+    print("Finding nodes")
+    # indeg centrality or degree
+    indeg = G.in_degree()
+    nodes = []
+    value_list = list(dict(indeg).values())
+    print(max(value_list))
+    i = 0
+    while len(nodes) < 100:
+        if value_list[i] >= 2 and value_list[i] <= 10:
+            nodes.append(list(dict(indeg).keys())[i])
+        i = i + 1
 
-    print(
-        f"Loaded graph with {G.number_of_nodes()} nodes and {G.number_of_edges()} edges"
-    )
+    G = G.subgraph(nodes).copy()
+    print(G)
 
-    # Visualize the graph with circles highlighted
+    G = G.to_undirected()
+
     plt.figure(figsize=(12, 12))
 
-    # Use a layout that works well for community structure
     pos = nx.spring_layout(G, seed=42)
 
-    # Draw all nodes and edges
     nx.draw_networkx_edges(G, pos)
 
     nx.draw_networkx_nodes(G, pos)
 
     plt.axis("off")
-    plt.savefig(f"facebook_ego_{ego_id}.png", dpi=300)
+    plt.savefig(f"facebook.png", dpi=300)
     plt.close()
 
     # betweennes
