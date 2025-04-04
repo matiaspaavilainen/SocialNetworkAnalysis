@@ -73,7 +73,7 @@ def stats(G, filename):
 
     clustering = nx.clustering(G).values()
 
-    plt.plot(clustering, marker=".", linestyle="")
+    plt.plot(clustering, marker=".")
 
     plt.title(f"clustering_{filename}")
     plt.tight_layout()
@@ -91,24 +91,9 @@ def stats(G, filename):
 
 
 def main():
-    edges_df = pd.read_csv("edges.csv")
-    G: nx.DiGraph = nx.from_pandas_edgelist(
-        edges_df,
-        source="id_1",
-        target="id_2",
-        create_using=nx.DiGraph(),
+    G: nx.DiGraph = nx.read_edgelist(
+        "edges.csv", delimiter=",", nodetype=int, create_using=nx.DiGraph()
     )
-
-    features_df = pd.read_csv("features.csv")
-    targets_df = pd.read_csv("target.csv")
-
-    for node_id, data in features_df.iterrows():
-        if node_id in G:
-            G.nodes[node_id]["features"] = ",".join(map(str, data.values))
-
-    for node_id, target in targets_df.iterrows():
-        if node_id in G:
-            G.nodes[node_id]["target"] = int(target.values[0])
 
     # get 100 nodes with highest in deg centr
     sorted100 = dict(
@@ -151,6 +136,7 @@ def main():
             bipart = sample_graph
 
     print(f"Bipartite: {bipart}")
+    nx.write_gexf(bipart, "bipart.gexf")
 
 
 if __name__ == "__main__":

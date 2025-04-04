@@ -4,7 +4,7 @@ import pickle
 
 
 def main():
-    with open("karate_club_coords.pkl", "rb") as file:
+    with open("Lab1/karate_club_coords.pkl", "rb") as file:
         data = pickle.load(file, encoding="bytes")
 
     G = nx.karate_club_graph()
