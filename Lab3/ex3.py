@@ -23,14 +23,14 @@ def exec_time(G, function, name):
     print(f"Time taken for {name}: {(time.time_ns() - start)} ns")
 
 
-def all_for_graph(G, filename, positions):
+def all_for_graph(G, filename):
     communities = girvan_newman(G)
 
     node_groups = []
     for com in next(communities):
         node_groups.append(list(com))
 
-    print(f"Grivan: {node_groups}")
+    print(f"Girvan: {len(node_groups)}")
 
     com_for_eval = girvan_newman(G)
     comm_quality(G, next(com_for_eval), "Girvan")
@@ -53,68 +53,95 @@ def all_for_graph(G, filename, positions):
         else:
             edge_cmap.append("black")
 
-    nx.draw(
-        G, node_color=color_map, with_labels=True, edge_color=edge_cmap, pos=positions
-    )
+    nx.draw(G, node_color=color_map, with_labels=True, edge_color=edge_cmap)
     plt.savefig(filename)
     plt.close()
 
     communities_kern = nx.algorithms.community.kernighan_lin_bisection(G)
     comm_quality(G, communities_kern, "Kern")
-    print(f"Kern: {communities_kern}")
+    print(f"Kern: {len(communities_kern)}")
 
     communities_louv = nx.algorithms.community.louvain_communities(G)
     comm_quality(G, communities_louv, "Louv")
-    print(f"Louv: {communities_louv}")
+    print(f"Louv: {len(communities_louv)}")
 
     communities_label = (
         nx.algorithms.community.label_propagation.label_propagation_communities(G)
     )
     comm_quality(G, communities_label, "Label")
-    print(f"Label: {list(communities_label)}")
+    print(f"Label: {len(list(communities_label))}")
 
     exec_time(G, girvan_newman, "Girvan")
     exec_time(G, nxcom.kernighan_lin_bisection, "Kern")
     exec_time(G, nxcom.louvain_communities, "Louv")
     exec_time(G, nxcom.label_propagation.label_propagation_communities, "Label")
 
+    overlap = []
+
+    for i in range(len(communities_kern)):
+        for node in list(communities_label)[i]:
+            if node in communities_kern[i] and node not in overlap:
+                overlap.append(node)
+
+    print(f"Overlap: {overlap}")
+
+    closeness = nx.closeness_centrality(G)
+    top32 = list(
+        dict(sorted(closeness.items(), key=lambda item: item[1], reverse=True)).keys()
+    )[:32]
+
+    print("top32", top32)
+    S: nx.Graph = nx.subgraph(G, top32)
+
+    color_map = []
+
+    for node in S.nodes:
+        if node in overlap:
+            color_map.append("green")
+        else:
+            color_map.append("red")
+
+    nx.draw(S, node_color=color_map, with_labels=True)
+    plt.savefig("closeness_overla.png")
+    plt.close()
+
 
 def main():
-    G: nx.Graph = nx.karate_club_graph()
-    pos_karate = nx.spring_layout(G)
-    all_for_graph(G, filename="karateonlypng", positions=pos_karate)
+
+    G: nx.Graph = nx.read_edgelist("congress.edgelist")
+    all_for_graph(G, filename="twitter.png")
 
     pathlen = nx.algorithms.average_shortest_path_length(G)
     print(f"Average path length: {pathlen}")
 
-    # new graph
-    all_x = [p[0] for p in pos_karate.values()]
-    all_y = [p[1] for p in pos_karate.values()]
-    min_x, max_x = min(all_x), max(all_x)
-    min_y, max_y = min(all_y), max(all_y)
-    pos_geometric = {}
+    # # new graph
+    # all_x = [p[0] for p in pos_karate.values()]
+    # all_y = [p[1] for p in pos_karate.values()]
+    # min_x, max_x = min(all_x), max(all_x)
+    # min_y, max_y = min(all_y), max(all_y)
+    # pos_geometric = {}
 
-    for i in range(20):
-        x = random.uniform(
-            min_x, max_x
-        )  # Use uniform instead of randint for better distribution
-        y = random.uniform(min_y, max_y)
-        pos_geometric[i] = np.array([x, y])
+    # for i in range(20):
+    #     x = random.uniform(
+    #         min_x, max_x
+    #     )  # Use uniform instead of randint for better distribution
+    #     y = random.uniform(min_y, max_y)
+    #     pos_geometric[i] = np.array([x, y])
 
-    # Pass the positions to the random_geometric_graph function
-    H: nx.Graph = nx.random_geometric_graph(20, pathlen, pos=pos_geometric)
-    H = nx.relabel_nodes(H, {i: i + 34 for i in range(20)})
+    # # Pass the positions to the random_geometric_graph function
+    # H: nx.Graph = nx.random_geometric_graph(20, pathlen, pos=pos_geometric)
+    # H = nx.relabel_nodes(H, {i: i + 34 for i in range(20)})
 
-    # Update positions after relabeling
-    pos_geometric_relabeled = {i + 34: pos for i, pos in pos_geometric.items()}
+    # # Update positions after relabeling
+    # pos_geometric_relabeled = {i + 34: pos for i, pos in pos_geometric.items()}
 
-    # Combine graphs
-    G = nx.union(G, H)
+    # # Combine graphs
+    # G = nx.union(G, H)
 
-    # Combine positions
-    combined_pos = {**pos_karate, **pos_geometric_relabeled}
+    # # Combine positions
+    # combined_pos = {**pos_karate, **pos_geometric_relabeled}
 
-    all_for_graph(G, filename="Extar20.png", positions=combined_pos)
+    # all_for_graph(G, filename="Extar20.png", positions=combined_pos)
 
 
 if __name__ == "__main__":
